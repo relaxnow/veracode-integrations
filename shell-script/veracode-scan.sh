@@ -88,7 +88,7 @@ echo ""
 
 #Upload files, start prescan and scan
 echo '[INFO] upload and scan'
-java -jar $JAVA_WRAPPER_LOCATION/VeracodeJavaAPI.jar -vid $1 -vkey $2 -action uploadandscan -appname $3 -createprofile true -sandboxname $4 -filepath $5 -version $6 > $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME 2>&1
+java -jar $JAVA_WRAPPER_LOCATION/VeracodeJavaAPI.jar -vid $1 -vkey $2 -action uploadandscan -appname $3 -createprofile true -sandboxname $4 -createsandbox true -filepath $5 -version $6 > $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME 2>&1
 echo ""
 
 upload_scan_results=$(cat $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME)
