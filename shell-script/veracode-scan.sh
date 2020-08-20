@@ -3,8 +3,9 @@
         #$1 API-ID
         #$2 API-Key
         #$3 AppName
-        #$4 Build working directory
-        #$5 Build version (Scan name)
+        #$4 Sandbox name
+        #$5 Build working directory
+        #$6 Build version (Scan name)
 
         PRESCAN_SLEEP_TIME=60
         SCAN_SLEEP_TIME=120
@@ -49,8 +50,9 @@
         echo 'API-Key: ' $2
         echo 'App-Name: ' $3
         echo 'APP-ID: ' $app_ID
-        echo 'File-Path: ' $4
-        echo 'Scan-Name: ' $5
+        echo 'Sandbox-Name: ' $4
+        echo 'File-Path: ' $5
+        echo 'Scan-Name: ' $6
         echo '====== DEBUG END ======'
         echo ""
 
@@ -58,8 +60,8 @@
         echo '[INFO] VERACODE scan pre-checks'
         echo '[INFO] directory checks'
         # Directory argument
-        if [[ "$4" != "" ]]; then
-             UPLOAD_DIR="$4"
+        if [[ "$5" != "" ]]; then
+             UPLOAD_DIR="$5"
         else
              echo "[ERROR] Directory not specified."
              exit 1
@@ -75,9 +77,9 @@
         fi
 
         # Version argument
-        if [[ "$5" != "" ]];
+        if [[ "$6" != "" ]];
         then
-             VERSION=$5
+             VERSION=$6
         else
              VERSION=`date "+%Y-%m-%d %T"`    # Use date as default
         fi
@@ -86,7 +88,7 @@
 
         #Upload files, start prescan and scan
         echo '[INFO] upload and scan'
-        java -jar $JAVA_WRAPPER_LOCATION/VeracodeJavaAPI.jar -vid $1 -vkey $2 -action uploadandscan -appname $3 -createprofile true -filepath $4 -version $5 > $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME 2>&1
+        java -jar $JAVA_WRAPPER_LOCATION/VeracodeJavaAPI.jar -vid $1 -vkey $2 -action uploadandscan -appname $3 -createprofile true -sandboxname $4 -filepath $5 -version $6 > $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME 2>&1
         echo ""
 
         upload_scan_results=$(cat $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME)
@@ -115,67 +117,3 @@
         echo ""
         #Delete file
         rm -rf $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME
-
-
-        #Check scan status
-        echo ""
-        echo "[INFO] checking scan status"
-        while true;
-        do
-             java -jar $JAVA_WRAPPER_LOCATION/VeracodeJavaAPI.jar -vid $1 -vkey $2 -action getbuildinfo -appid $app_ID > $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME 2>&1
-             scan_status=$(cat $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME)
-             if [[ $scan_status = *"Scan In Process"* ]];
-             then
-                   echo ""
-                   echo '[INFO] scan in process ...'
-                   echo '[INFO] wait 2 more minutes ...'
-                   sleep $SCAN_SLEEP_TIME
-             elif [[ $scan_status = *"Submitted to Engine"* ]];
-             then
-                   echo ""
-                   echo '[INFO] Application submitted to scan engine'
-                   echo '[INFO] Scan will start momentarily'
-                   echo '[INFO] wait 1 more mintue'
-                   sleep $PRESCAN_SLEEP_TIME
-             elif [[ $scan_status = *"Pre-Scan Submitted"* ]];
-             then
-                   echo ""
-                   echo '[INFO] pre-scan still running ...'
-                   echo '[INFO] wait 1 more minute ...'
-                  sleep $PRESCAN_SLEEP_TIME
-             elif [[ $scan_status = *"Pre-Scan Success"* ]];
-             then
-                   java -jar $JAVA_WRAPPER_LOCATION/VeracodeJavaAPI.jar -vid $1 -vkey $2 -action GetPreScanResults -appid $app_ID > $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME 2>&1
-                   echo ""
-                   echo '[ ERROR ] Something went wrong with the prescan!'
-                   cat $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME
-                   rm -rf $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME
-                   exit 1 && break
-             else
-                   scan_finished=$(cat $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME)
-                   if [[ $scan_finished = *"Results Ready"* ]];
-                   then
-                        echo ""
-                        echo '[INFO] scan has finished'
-                        rm -rf $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME
-                        sleep $SCAN_SLEEP_TIME
-                        break;
-                   fi
-             fi
-        done
-
-        echo ""
-        echo '[INFO] Scan results'
-        java -jar $JAVA_WRAPPER_LOCATION/VeracodeJavaAPI.jar -vid $1 -vkey $2 -action passfail -appname $3 > $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME 2>&1
-        scan_result=$(cat $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME)
-
-        if [[ $scan_result = *"Did Not Pass"* ]];
-        then
-             echo 'Application: ' $3 '(App-ID '$app_ID') - Scanname: ' $5 '(Build-ID '$build_id') - Did NOT pass'
-             rm -rf $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME
-             exit 1
-        else
-             echo 'Application: ' $3 '(App-ID '$app_ID') - Scanname: ' $5 '(Build-ID '$build_id') - Did pass'
-             rm -rf $OUTPUT_FILE_LOCATION$OUTPUT_FILE_NAME
-             exit 0
-        fi
